@@ -31,10 +31,6 @@ same buddy to the Cardputer ADV's keyboard-and-landscape-screen form factor.
 > Service UUIDs, JSON schemas, and the folder push transport. It's
 > hardware-agnostic and unchanged from upstream.
 
-<p align="center">
-  <img src="docs/device.jpg" alt="The upstream M5StickC Plus buddy — shown for reference; this fork targets the M5Stack Cardputer ADV instead" width="500">
-</p>
-
 ## Hardware
 
 The firmware targets ESP32-**S3** with the Arduino framework, via the
