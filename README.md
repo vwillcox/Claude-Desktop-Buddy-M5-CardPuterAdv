@@ -1,32 +1,39 @@
-# claude-desktop-buddy
+# Claude Desktop Buddy — M5Stack Cardputer ADV
+
+**This is a fork of [anthropics/claude-desktop-buddy](https://github.com/anthropics/claude-desktop-buddy),
+ported to run on the [M5Stack Cardputer ADV](https://shop.m5stack.com/products/m5stack-cardputer-adv-version-esp32-s3)
+(Stamp-S3A / ESP32-S3)** — not the M5StickC Plus the upstream project
+targets. If you have a Cardputer ADV, this is the tree to flash. If you
+have a StickC Plus, use the upstream repo instead.
+
+The Cardputer ADV is a genuinely different machine from the StickC Plus:
+ESP32-**S3**, a landscape 240×135 screen, a 56-key keyboard instead of two
+side buttons, no RTC chip, no AXP power-management IC. Porting it meant
+reworking the layout, input handling, power/battery reporting, the clock
+screensaver, and the attention LED — see
+[Hardware differences](#hardware-differences-from-the-m5stickc-plus-original)
+below for the honest list of what's better, what's degraded, and what got
+dropped along the way.
+
+---
 
 Claude for macOS and Windows can connect Claude Cowork and Claude Code to
 maker devices over BLE, so developers and makers can build hardware that
-displays permission prompts, recent messages, and other interactions. We've
-been impressed by the creativity of the maker community around Claude -
-providing a lightweight, opt-in API is our way of making it easier to build
-fun little hardware devices that integrate with Claude.
+displays permission prompts, recent messages, and other interactions. As an
+example, Anthropic built a desk pet that lives off permission approvals and
+interaction with Claude. It sleeps when nothing's happening, wakes when
+sessions start, gets visibly impatient when an approval prompt is waiting,
+and lets you approve or deny right from the device. This fork brings that
+same buddy to the Cardputer ADV's keyboard-and-landscape-screen form factor.
 
 > **Building your own device?** You don't need any of the code here. See
 > **[REFERENCE.md](REFERENCE.md)** for the wire protocol: Nordic UART
-> Service UUIDs, JSON schemas, and the folder push transport.
-
-As an example, we built a desk pet on ESP32 that lives off permission
-approvals and interaction with Claude. It sleeps when nothing's happening,
-wakes when sessions start, gets visibly impatient when an approval prompt is
-waiting, and lets you approve or deny right from the device.
+> Service UUIDs, JSON schemas, and the folder push transport. It's
+> hardware-agnostic and unchanged from upstream.
 
 <p align="center">
-  <img src="docs/device.jpg" alt="M5StickC Plus running the buddy firmware" width="500">
+  <img src="docs/device.jpg" alt="The upstream M5StickC Plus buddy — shown for reference; this fork targets the M5Stack Cardputer ADV instead" width="500">
 </p>
-
-This tree is a fork of the original M5StickC Plus firmware, ported to run on
-the **M5Stack Cardputer ADV** (Stamp-S3A / ESP32-S3). It's a genuinely
-different machine — landscape 240×135 screen, a 56-key keyboard instead of
-two side buttons, no RTC chip, no AXP power-management IC — so quite a bit
-changed along the way. See [Hardware differences](#hardware-differences)
-below for the honest list of what's better, what's degraded, and what got
-dropped.
 
 ## Hardware
 
