@@ -20,12 +20,32 @@ waiting, and lets you approve or deny right from the device.
   <img src="docs/device.jpg" alt="M5StickC Plus running the buddy firmware" width="500">
 </p>
 
+This tree is a fork of the original M5StickC Plus firmware, ported to run on
+the **M5Stack Cardputer ADV** (Stamp-S3A / ESP32-S3). It's a genuinely
+different machine — landscape 240×135 screen, a 56-key keyboard instead of
+two side buttons, no RTC chip, no AXP power-management IC — so quite a bit
+changed along the way. See [Hardware differences](#hardware-differences)
+below for the honest list of what's better, what's degraded, and what got
+dropped.
+
 ## Hardware
 
-The firmware targets ESP32 with the Arduino framework. As written, it
-depends on the M5StickCPlus library for its display, IMU, and button
-drivers—so you'll need that board, or a fork that swaps those drivers for
-your own pin layout.
+The firmware targets ESP32-**S3** with the Arduino framework, via the
+[`m5stack/M5Cardputer`](https://github.com/m5stack/M5Cardputer) library
+(itself built on M5Unified/M5GFX). You'll need a Cardputer ADV, or a fork
+that swaps the display/keyboard/power drivers for your own pin layout.
+
+### Hardware differences from the M5StickC Plus original
+
+| | M5StickC Plus | Cardputer ADV |
+| --- | --- | --- |
+| Input | 2 side buttons | 56-key keyboard (see [Controls](#controls)) |
+| Screen | 135×240 portrait | 240×135 landscape, pet + HUD side by side |
+| IMU (shake/nap) | MPU6886 | BMI270 — same API, thresholds not yet tuned on real hardware |
+| Clock screensaver | RTC chip, survives reboot | **No RTC chip.** RAM-only clock set from the desktop's BLE time sync — resets to hidden on every reboot until re-paired |
+| Status LED | discrete LED, pulses on approval | **No LED.** Periodic beep instead, only while the screen is off (the animated pet already shows it while the screen's on) |
+| Battery % | AXP192 fuel gauge | ADC-only voltage estimate — no current sense, no VBUS detection, no temperature. The Device info page and BLE `status` command are shorter accordingly |
+| Power off | AXP192 rail cut | `deepSleep()` — there's no PMIC to cut power in software; only the physical slide switch fully powers it down |
 
 ## Flashing
 
@@ -43,8 +63,8 @@ If you're starting from a previously-flashed device, wipe it first:
 pio run -t erase && pio run -t upload
 ```
 
-Once running, you can also wipe everything from the device itself: **hold A
-→ settings → reset → factory reset → tap twice**.
+Once running, you can also wipe everything from the device itself: **Tab →
+settings → reset → factory reset → Enter twice**.
 
 ## Pairing
 
@@ -68,18 +88,28 @@ If discovery isn't finding the stick:
 
 ## Controls
 
-|                         | Normal               | Pet         | Info        | Approval    |
-| ----------------------- | -------------------- | ----------- | ----------- | ----------- |
-| **A** (front)           | next screen          | next screen | next screen | **approve** |
-| **B** (right)           | scroll transcript    | next page   | next page   | **deny**    |
-| **Hold A**              | menu                 | menu        | menu        | menu        |
-| **Power** (left, short) | toggle screen off    |             |             |             |
-| **Power** (left, ~6s)   | hard power off       |             |             |             |
-| **Shake**               | dizzy                |             |             | —           |
-| **Face-down**           | nap (energy refills) |             |             |             |
+Interaction moved onto the keyboard entirely — the reachable G0/BOOT button
+on the Stamp-S3A module isn't used for buddy UI. The registry release of
+`M5Cardputer` has no Fn-layer/Esc/arrow-key support in its keyboard API, so
+deny and navigation are bound directly to the physical keys that sit where
+Fn-arrows would be, no Fn needed: **`` ` ``** (top-left key) for deny/back,
+**`;` `.` `/`** for up/down/next-page.
 
-The screen auto-powers-off after 30s of no interaction (kept on while an
-approval prompt is up). Any button press wakes it.
+|                  | Normal                 | Pet         | Info        | Approval    |
+| ---------------- | ---------------------- | ----------- | ----------- | ----------- |
+| **Enter**        | —                      | —           | —           | **approve** |
+| **`` ` ``**      | back/close             | back/close  | back/close  | **deny**    |
+| **Tab**          | menu                   | menu        | menu        | menu        |
+| **Space**        | next screen            | next screen | next screen | —           |
+| **`/`**          | —                      | next page   | next page   | —           |
+| **`;`  `.`**     | scroll transcript      | —           | —           | —           |
+| **Shake**        | dizzy                  |             |             | —           |
+| **Face-down**    | nap (energy refills)   |             |             |             |
+
+Inside menus, **`;`/`.`** navigates items and **Enter** selects.
+
+The screen auto-powers-off after 3 minutes of no interaction (kept on while an
+approval prompt is up). Any keypress wakes it.
 
 ## ASCII pets
 
@@ -122,11 +152,12 @@ State values can be a single filename or an array. Arrays rotate: each
 loop-end advances to the next GIF, useful for an idle activity carousel so
 the home screen doesn't loop one clip forever.
 
-GIFs are 96px wide; height up to ~140px stays on a 135×240 portrait screen.
-Crop tight to the character — transparent margins waste screen and shrink
-the sprite. `tools/prep_character.py` handles the resize: feed it source
-GIFs at any sizes and it produces a 96px-wide set where the character is the
-same scale in every state.
+GIFs are 96px wide; the pet renders in a 120×135 left-hand column now (was
+the full 135×240 portrait screen on the M5StickC Plus original), so keep
+height modest too. Crop tight to the character — transparent margins waste
+screen and shrink the sprite. `tools/prep_character.py` handles the resize:
+feed it source GIFs at any sizes and it produces a 96px-wide set where the
+character is the same scale in every state.
 
 The whole folder must fit under 1.8MB —
 `gifsicle --lossy=80 -O3 --colors 64` typically cuts 40–60%.
@@ -144,7 +175,7 @@ If you're iterating on a character and would rather skip the BLE round-trip,
 | `sleep`     | bridge not connected        | eyes closed, slow breathing |
 | `idle`      | connected, nothing urgent   | blinking, looking around    |
 | `busy`      | sessions actively running   | sweating, working           |
-| `attention` | approval pending            | alert, **LED blinks**       |
+| `attention` | approval pending            | alert, **beeps if screen's off** |
 | `celebrate` | level up (every 50K tokens) | confetti, bouncing          |
 | `dizzy`     | you shook the stick         | spiral eyes, wobbling       |
 | `heart`     | approved in under 5s        | floating hearts             |

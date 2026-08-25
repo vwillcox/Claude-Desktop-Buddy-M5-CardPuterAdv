@@ -20,11 +20,9 @@ void characterTick();
 void characterInvalidate();
 void characterClose();   // close GIF + clear loaded flag; FS stays mounted   // full clear + reopen current — call when an overlay closes
 
-// Peek mode renders the GIF at half scale, centered in the info-panel
-// header strip; off renders full-size centered in the upper home area.
-// Adaptive to actual canvas height — no padding required in source art.
+// Peek mode is a no-op on Cardputer ADV — the 135px-tall screen has no
+// room to also peek the pet during INFO/PET pages, so main.cpp skips
+// character rendering entirely on those screens instead of shrinking it.
 void characterSetPeek(bool peek);
-class TFT_eSPI;
-void characterRenderTo(TFT_eSPI* tgt, int cx, int cy);
 
 const Palette& characterPalette();

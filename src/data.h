@@ -62,29 +62,29 @@ inline const char* dataScenarioName() {
   return "none";
 }
 
-// Set true once the bridge sends a time sync — until then the RTC may
-// hold whatever was on the coin cell (or 2000-01-01 if it lost power).
-static bool _rtcValid = false;
+// Cardputer ADV has no RTC chip — there's nothing to hold time across a
+// reboot. Instead we keep a RAM-only offset from millis() to wall-clock
+// epoch seconds, set each time the bridge sends a time sync. Valid only
+// until the next reboot; _rtcValid resets to false on every boot and the
+// clock screensaver simply doesn't show until the desktop re-syncs it.
+static bool     _rtcValid    = false;
+static int64_t  _epochOffset = 0;   // wall-clock epoch = millis()/1000 + offset
 inline bool dataRtcValid() { return _rtcValid; }
+inline time_t dataNowEpoch() { return (time_t)(millis() / 1000 + _epochOffset); }
 
 static void _applyJson(const char* line, TamaState* out) {
   JsonDocument doc;
   if (deserializeJson(doc, line)) return;
   if (xferCommand(doc)) { _lastLiveMs = millis(); return; }
 
-  // Bridge sends {"time":[epoch_sec, tz_offset_sec]}; gmtime_r on the
-  // adjusted epoch yields local components including weekday.
+  // Bridge sends {"time":[epoch_sec, tz_offset_sec]}. With no RTC chip to
+  // set, just record the offset from millis() to local wall-clock epoch —
+  // dataNowEpoch() + gmtime_r reconstructs the same local components
+  // (including weekday) the original RTC-backed path did.
   JsonArray t = doc["time"];
   if (!t.isNull() && t.size() == 2) {
     time_t local = (time_t)t[0].as<uint32_t>() + (int32_t)t[1];
-    struct tm lt; gmtime_r(&local, &lt);
-    RTC_TimeTypeDef tm = { (uint8_t)lt.tm_hour, (uint8_t)lt.tm_min, (uint8_t)lt.tm_sec };
-    RTC_DateTypeDef dt = { (uint8_t)lt.tm_wday, (uint8_t)(lt.tm_mon + 1),
-                           (uint8_t)lt.tm_mday, (uint16_t)(lt.tm_year + 1900) };
-    M5.Rtc.SetTime(&tm);
-    M5.Rtc.SetDate(&dt);
-    extern uint32_t _clkLastRead;
-    _clkLastRead = 0;   // force re-read so _clkDt and _rtcValid agree
+    _epochOffset = (int64_t)local - (int64_t)(millis() / 1000);
     _rtcValid = true;
     _lastLiveMs = millis();
     return;
